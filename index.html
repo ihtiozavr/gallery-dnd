@@ -20,7 +20,7 @@
 :root[data-theme="dark"]{--bg:#17161d; --fg:#ecebf3; --muted:#9a98aa; --line:#2e2d38; --accent:#9a86ff; --accent-pale:#352e5c; --tile:#24232c; --arrow:rgba(0,0,0,.6); color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font-family:var(--font-ui);font-size:15px;line-height:1.5;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px}
-.wrap{max-width:1440px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.wrap{max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
 h1{font-size:22px;font-weight:600;margin:0;text-wrap:balance}
 .hint{color:var(--muted);margin:0;max-width:72ch}
 .tabs{display:flex;flex-wrap:wrap;gap:6px}
@@ -44,7 +44,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .s-purple .tile.placeholder img{opacity:0}
 .arrow{position:absolute;top:50%;width:32px;height:32px;margin-top:-16px;border-radius:50%;border:0;background:var(--arrow);color:#fff;font-size:18px;line-height:32px;text-align:center;cursor:pointer;z-index:3;padding:0}
 .arrow.left{left:8px}.arrow.right{right:8px}
-.ghost{position:fixed;z-index:20;pointer-events:none;border-radius:4px;overflow:hidden;box-shadow:0 12px 28px rgba(20,16,50,.28)}
+.ghost{position:fixed;z-index:20;pointer-events:none;border-radius:4px;overflow:hidden;opacity:.5;box-shadow:0 8px 20px rgba(20,16,50,.2)}
 .ghost img{width:100%;height:100%;object-fit:cover;display:block}
 body.dragging,body.dragging .tile{cursor:grabbing}
 .bar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between}
@@ -57,7 +57,7 @@ body.dragging,body.dragging .tile{cursor:grabbing}
 
 <div class="wrap">
   <h1>Перестановка картинок в галерее</h1>
-  <p class="hint">Зажмите картинку и потащите. Слева раскладка перестраивается под курсором, справа место вставки показывает линия, а раскладка меняется только после отпускания. Esc отменяет перетаскивание.</p>
+  <p class="hint">Зажмите картинку и потащите. Перетаскиваемая картинка полупрозрачная, сквозь неё видна линия: она показывает, куда встанет картинка. Раскладка перестраивается после отпускания. Esc отменяет перетаскивание.</p>
   <div class="tabs" role="tablist" id="tabs"></div>
   <div class="grid" id="grid"></div>
 </div>
@@ -68,8 +68,7 @@ const NAMES={coffee:"A",book:"B",boat:"C",flower:"D",plant:"E",cup:"F"};
 const START=["coffee","book","boat","flower","plant","cup"];
 const GAP=12;
 const STYLES=[
-  {id:"purple",kind:"live",title:"Перестройка на лету",text:"Раскладка перестраивается во время перетаскивания, на месте опускания ячейка с бледно-фиолетовой заливкой."},
-  {id:"line",kind:"line",title:"Линия",text:"Раскладка не меняется до отпускания. Место вставки показывает линия в промежутке между картинками."}
+  {id:"line",kind:"line",title:"",text:""}
 ];
 const MODES={
   collage:{name:"Коллаж",axis:"x",layout(ord,W){
@@ -100,8 +99,8 @@ class Gallery{
   constructor(style,host){
     this.kind=style.kind;this.order=[...START];this.scrollX=0;this.L=null;this.tiles={};
     const col=document.createElement('div');col.className='col';
-    col.innerHTML='<h2>'+style.title+'</h2><p>'+style.text+'</p>';
-    this.view=document.createElement('div');this.view.className='view s-'+style.id;this.view.setAttribute('aria-label','Галерея: '+style.title);
+    if(style.title)col.innerHTML='<h2>'+style.title+'</h2><p>'+style.text+'</p>';
+    this.view=document.createElement('div');this.view.className='view s-'+style.id;this.view.setAttribute('aria-label','Галерея');
     this.track=document.createElement('div');this.track.className='track';this.view.appendChild(this.track);
     this.line=document.createElement('div');this.line.className='dropline';this.line.hidden=true;this.track.appendChild(this.line);
     for(const k of START){const d=document.createElement('div');d.className='tile';d.innerHTML='<img alt="" src="'+IMGS[k].src+'">';this.track.appendChild(d);this.tiles[k]=d;
@@ -175,8 +174,8 @@ function hitTest(){
   if(G.kind==='line'){
     if(next.join()===G.order.join()){G.line.hidden=true;drag.target=null;return;}
     drag.target=next;const l=G.line;l.hidden=false;
-    if(ax==='x'){const lx=side==='before'?p.x-GAP/2:p.x+p.w+GAP/2;Object.assign(l.style,{left:(lx-1)+'px',top:(p.y+4)+'px',width:'2px',height:(p.h-8)+'px'});}
-    else{const ly=side==='before'?p.y-GAP/2:p.y+p.h+GAP/2;Object.assign(l.style,{left:(p.x+4)+'px',top:(ly-1)+'px',width:(p.w-8)+'px',height:'2px'});}
+    if(ax==='x'){const lx=Math.min(Math.max(side==='before'?p.x-GAP/2:p.x+p.w+GAP/2,1),G.L.width-1);Object.assign(l.style,{left:(lx-1)+'px',top:(p.y+4)+'px',width:'2px',height:(p.h-8)+'px'});}
+    else{const ly=Math.min(Math.max(side==='before'?p.y-GAP/2:p.y+p.h+GAP/2,1),G.L.height-1);Object.assign(l.style,{left:(p.x+4)+'px',top:(ly-1)+'px',width:(p.w-8)+'px',height:'2px'});}
     return;}
   if(next.join()===G.order.join())return;
   G.order=next;G.render();drag.lock=performance.now()+180;
